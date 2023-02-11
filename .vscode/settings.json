@@ -1,0 +1,22 @@
+{
+    "search.exclude": {
+        "**/*.d": true,
+        "**/*.o": true,
+        "**/_*": true,
+        "**/*.asm": true,
+        "**/*.sym": true,
+    },
+    "files.exclude": {
+        "**/*.d": true,
+        "**/*.o": true,
+        "**/_*": true,
+        "**/*.asm": true,
+        "**/*.sym": true,
+    },
+    "files.associations": {
+        "types.h": "c",
+        "stat.h": "c",
+        "sstream": "c",
+        "complex": "c"
+    }
+}
