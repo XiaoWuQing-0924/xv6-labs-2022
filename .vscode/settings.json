@@ -1,0 +1,22 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/*.o": true,
+        "**/*.d": true,
+        "**/_*": true,
+    },
+    "files.associations": {
+        "proc.h": "c",
+        "cstdlib": "c",
+        "defs.h": "c",
+        "riscv.h": "c",
+        "spinlock.h": "c",
+        "memlayout.h": "c",
+        "param.h": "c"
+    }
+}

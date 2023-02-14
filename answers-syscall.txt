@@ -1,0 +1,6 @@
+1:usertrap ()
+2:p->trapframe->a7 || SYS_exec
+3:0x22
+4:num = *(int *)0; || s2
+5:Load page fault
+6:initcode || 1
