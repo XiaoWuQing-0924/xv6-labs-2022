@@ -1,5 +1,5 @@
 
-user/_mkdir：     文件格式 elf64-littleriscv
+user/_mkdir:     file format elf64-littleriscv
 
 
 Disassembly of section .text:

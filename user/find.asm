@@ -1,5 +1,5 @@
 
-user/_find：     文件格式 elf64-littleriscv
+user/_find:     file format elf64-littleriscv
 
 
 Disassembly of section .text:

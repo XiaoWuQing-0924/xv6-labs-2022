@@ -1,5 +1,5 @@
 
-user/_wc：     文件格式 elf64-littleriscv
+user/_wc:     file format elf64-littleriscv
 
 
 Disassembly of section .text:

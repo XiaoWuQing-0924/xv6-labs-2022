@@ -10,7 +10,7 @@
         "**/*.d": true,
         "**/*.o": true,
         "**/_*": true,
-        "**/*.asm": true,
+        "**/*.asm": false,
         "**/*.sym": true,
     },
     "files.associations": {

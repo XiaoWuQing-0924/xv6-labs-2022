@@ -1,5 +1,5 @@
 
-user/_xargs：     文件格式 elf64-littleriscv
+user/_xargs:     file format elf64-littleriscv
 
 
 Disassembly of section .text:

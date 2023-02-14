@@ -1,5 +1,5 @@
 
-user/_sleep：     文件格式 elf64-littleriscv
+user/_sleep:     file format elf64-littleriscv
 
 
 Disassembly of section .text:

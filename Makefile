@@ -325,6 +325,9 @@ ping:
 	python3 ping.py $(FWDPORT)
 endif
 
+gdb:
+	gdb-multiarch kernel/kernel
+
 ##
 ##  FOR testing lab grading script
 ##

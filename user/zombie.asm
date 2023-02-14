@@ -1,5 +1,5 @@
 
-user/_zombie：     文件格式 elf64-littleriscv
+user/_zombie:     file format elf64-littleriscv
 
 
 Disassembly of section .text:
