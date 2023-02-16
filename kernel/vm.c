@@ -30,7 +30,7 @@ kvmmake(void)
   // virtio mmio disk interface
   kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
-  // PLIC
+  // PLIC 中断控制器
   kvmmap(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
 
   // map kernel text executable and read-only.
@@ -70,6 +70,8 @@ kvminithart()
   sfence_vma();
 }
 
+// 给出已经申请好的第一级页表，和虚拟地址va，申请对应的二级页表和三级页表（如果还没有被申请的话）
+// 返回最后三级页表所在的地址
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
@@ -89,20 +91,28 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     panic("walk");
 
   for(int level = 2; level > 0; level--) {
-    pte_t *pte = &pagetable[PX(level, va)];
+    pte_t *pte = &pagetable[PX(level, va)];//eg va = 0x8000000, PX(level = 2, va) = 1,
+                                            //即第一级页表的第二个PTE，一个pagetable有512个PTE，
+                                            //一个pagetable占4kB，一个PTE占8B = 64bit，
+    
     if(*pte & PTE_V) {
-      pagetable = (pagetable_t)PTE2PA(*pte);
+      pagetable = (pagetable_t)PTE2PA(*pte);//如果该pte已经创建过了，那么就根据当前pte计算下一级页表所在的地址
+                                            //计算过程：当前pte中的44bit的PPN，与12位bit的0，组成56位物理地址，
+                                                    //该地址就是下一级页表所在的物理地址
+                                            //否则就创建下一级页表kalloc()，并填写pte内容
+                                            //pte组成：0～9：标志位；10～53：PPN（物理页号或下一级页表的地址）
     } else {
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
       memset(pagetable, 0, PGSIZE);
-      *pte = PA2PTE(pagetable) | PTE_V;
+      *pte = PA2PTE(pagetable) | PTE_V;//根据申请到的下级页表地址pagetable，以及标志位，填写当前pte内容
     }
   }
   return &pagetable[PX(0, va)];
 }
 
-// Look up a virtual address, return the physical address,
+// Look up a virtual address, return the physical address
+//（只是物理页号PPN，实际物理地址还需要加上偏移量，也就是虚拟地址的低12bit）,
 // or 0 if not mapped.
 // Can only be used to look up user pages.
 uint64
@@ -151,11 +161,12 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   a = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
   for(;;){
-    if((pte = walk(pagetable, a, 1)) == 0)
+    if((pte = walk(pagetable, a, 1)) == 0)//如果申请到的三级页表地址为0
       return -1;
-    if(*pte & PTE_V)
+    if(*pte & PTE_V) //如果该三级页表已经被申请过了
+                    //一个虚拟地址只能对应一个物理地址；但一个物理地址可以对应多个虚拟地址
       panic("mappages: remap");
-    *pte = PA2PTE(pa) | perm | PTE_V;
+    *pte = PA2PTE(pa) | perm | PTE_V;//根据给出的物理地址，及标志位，填写三级页表内容
     if(a == last)
       break;
     a += PGSIZE;
@@ -436,4 +447,26 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+void
+vmprint(pagetable_t pagetable, int index){
+    if(index == 3){
+        return;
+    }
+    if(index == 0){
+        printf("page table %p\n", pagetable);
+    }
+    for(int i = 0; i < 512; i++){
+        pte_t pte = pagetable[i];
+        if(pte & PTE_V){
+            uint64 pa = PTE2PA(pte);
+            for(int j = 0; j <= index; j++){
+                printf(" ..");
+            }
+            printf("%d: pte %p pa %p\n", i, pte, pa);
+            vmprint((pagetable_t) pa, index + 1);
+        }
+    }
+    return;
 }

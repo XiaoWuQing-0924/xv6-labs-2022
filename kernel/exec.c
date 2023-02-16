@@ -95,18 +95,18 @@ exec(char *path, char **argv)
     sp -= sp % 16; // riscv sp must be 16-byte aligned
     if(sp < stackbase)
       goto bad;
-    if(copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
+    if(copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)//将内核空间的参数，复制到用户栈的顶部
       goto bad;
     ustack[argc] = sp;
   }
   ustack[argc] = 0;
-
+    //？？？为什么 **argv 和 argc没有写到内核栈中？
   // push the array of argv[] pointers.
   sp -= (argc+1) * sizeof(uint64);
   sp -= sp % 16;
   if(sp < stackbase)
     goto bad;
-  if(copyout(pagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
+  if(copyout(pagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)//将参数地址复制到用户栈中
     goto bad;
 
   // arguments to user main(argc, argv)
@@ -128,6 +128,7 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
+  if(p->pid==1) vmprint(p->pagetable, 0);
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:

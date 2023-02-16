@@ -70,14 +70,39 @@ sys_sleep(void)
 }
 
 
-#ifdef LAB_PGTBL
+//#ifdef LAB_PGTBL
 int
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
+    // lab pgtbl: your code here.
+    int num;
+    struct proc *p = myproc();
+    uint64 buf, maskAddr;
+    uint32 mask = 0;
+    pte_t * pte;
+    argaddr(0, &buf);
+    argint(1, &num);
+    argaddr(2, &maskAddr);
+    if(num > 32){
+        panic("sys_pgaccess num too lager!!\n");
+        return -1;
+    }
+    for(int i = 0; i < num; i++){
+        uint64 pa = (uint64)((char *)buf + i * PGSIZE);
+        if( (pte = walk(p->pagetable, pa, 0)) == 0){
+            return -1;
+        }
+        if(*pte & PTE_A){
+            mask |= (1L << i);
+            *pte &= ~PTE_A;
+        }
+    }
+    if(copyout(p->pagetable, maskAddr, (char *)&mask, sizeof(mask)) < 0){
+        panic("sys_pgaccess copyout error!\n");
+    }
   return 0;
 }
-#endif
+//#endif
 
 uint64
 sys_kill(void)

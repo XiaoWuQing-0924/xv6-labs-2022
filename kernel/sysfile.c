@@ -439,7 +439,7 @@ sys_exec(void)
   uint64 uargv, uarg;
 
   argaddr(1, &uargv);
-  if(argstr(0, path, MAXPATH) < 0) {
+  if(argstr(0, path, MAXPATH) < 0) {//复制exec第一个参数，也就是可执行文件的path
     return -1;
   }
   memset(argv, 0, sizeof(argv));
@@ -447,7 +447,7 @@ sys_exec(void)
     if(i >= NELEM(argv)){
       goto bad;
     }
-    if(fetchaddr(uargv+sizeof(uint64)*i, (uint64*)&uarg) < 0){
+    if(fetchaddr(uargv+sizeof(uint64)*i, (uint64*)&uarg) < 0){//将用户空间中的*argv（参数的地址），复制到内核空间
       goto bad;
     }
     if(uarg == 0){
@@ -457,7 +457,7 @@ sys_exec(void)
     argv[i] = kalloc();
     if(argv[i] == 0)
       goto bad;
-    if(fetchstr(uarg, argv[i], PGSIZE) < 0)
+    if(fetchstr(uarg, argv[i], PGSIZE) < 0)//将用户空间中的**argv（参数字符串），复制到内核空间
       goto bad;
   }
 
