@@ -36,36 +36,36 @@ uservec:
         li a0, TRAPFRAME
         
         # save the user registers in TRAPFRAME
-        sd ra, 40(a0)
-        sd sp, 48(a0)
-        sd gp, 56(a0)
-        sd tp, 64(a0)
-        sd t0, 72(a0)
-        sd t1, 80(a0)
-        sd t2, 88(a0)
-        sd s0, 96(a0)
-        sd s1, 104(a0)
-        sd a1, 120(a0)
-        sd a2, 128(a0)
-        sd a3, 136(a0)
-        sd a4, 144(a0)
-        sd a5, 152(a0)
-        sd a6, 160(a0)
-        sd a7, 168(a0)
-        sd s2, 176(a0)
-        sd s3, 184(a0)
-        sd s4, 192(a0)
-        sd s5, 200(a0)
-        sd s6, 208(a0)
-        sd s7, 216(a0)
-        sd s8, 224(a0)
-        sd s9, 232(a0)
-        sd s10, 240(a0)
-        sd s11, 248(a0)
-        sd t3, 256(a0)
-        sd t4, 264(a0)
-        sd t5, 272(a0)
-        sd t6, 280(a0)
+        sd ra, 40(a0) #返回地址
+        sd sp, 48(a0) #栈指针
+        sd gp, 56(a0) #全局指针
+        sd tp, 64(a0) #线程指针
+        sd t0, 72(a0) #临时变量寄存器0
+        sd t1, 80(a0) #临时变量寄存器1
+        sd t2, 88(a0) #临时变量寄存器2
+        sd s0, 96(a0) #保留寄存器0/栈帧指针
+        sd s1, 104(a0) #保留存存器1
+        sd a1, 120(a0) #函数参数1
+        sd a2, 128(a0) #函数参数2
+        sd a3, 136(a0) #函数参数3
+        sd a4, 144(a0) #函数参数4
+        sd a5, 152(a0) #函数参数5
+        sd a6, 160(a0) #函数参数6
+        sd a7, 168(a0) #函数参数7
+        sd s2, 176(a0) #保存寄存器2
+        sd s3, 184(a0) #保存寄存器3
+        sd s4, 192(a0) #保存寄存器4
+        sd s5, 200(a0) #保存寄存器5
+        sd s6, 208(a0) #保存寄存器6
+        sd s7, 216(a0) #保存寄存器7
+        sd s8, 224(a0) #保存寄存器8
+        sd s9, 232(a0) #保存寄存器9
+        sd s10, 240(a0) #保存寄存器10
+        sd s11, 248(a0) #保存寄存器11
+        sd t3, 256(a0) #临时变量寄存器3
+        sd t4, 264(a0) #临时变量寄存器4
+        sd t5, 272(a0) #临时变量寄存器5
+        sd t6, 280(a0) #临时变量寄存器6
 
 	# save the user a0 in p->trapframe->a0
         csrr t0, sscratch

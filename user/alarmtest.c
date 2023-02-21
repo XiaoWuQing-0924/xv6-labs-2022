@@ -35,6 +35,17 @@ volatile static int count;
 void
 periodic()
 {
+    //为什么不写sigreturn();也可以正常返回到test0中？
+    //因为在XV6中函数调用发生时，不会自动将ra压入栈中，而是需要在被调用函数开头将ra和fp压入栈，例如本函数：
+            // 0:	1141                	addi	sp,sp,-16
+            // 2:	e406                	sd	ra,8(sp)
+            // 4:	e022                	sd	s0,0(sp)
+            // 6:	0800                	addi	s0,sp,16
+    //因此在traps返回时，我们把epc指向了periodic()，
+    //随后periodic()函数将ra压入栈中，ra就是test0函数中写入的，情况可能不确定，但是总规是在test0中
+    //因此即使不写sigreturn() 也可以可以返回到test0中，可能会有bug。
+    //验证的方法很好做，就是在traps中改写epc寄存器的同时，将p->trapframe->ra = 0x0;
+    //这样，traps返回时，ra=0x0，即periodic()函数，这样程序会一直在periodic()中循环！
   count = count + 1;
   printf("alarm!\n");
   sigreturn();

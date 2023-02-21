@@ -48,7 +48,11 @@ usertrap(void)
   struct proc *p = myproc();
   
   // save user program counter.
-  p->trapframe->epc = r_sepc();
+  p->trapframe->epc = r_sepc();//1、为什么要在这里保存epc而不是trampoline.S中？
+                                //两者都可以，用户寄存器必须在trampoline.S保存
+                                //2、为什么需要保存epc？
+                                //因为在后面中断开启后，可能会被其他进程抢断，其他进程也会触发中断，
+                                //就会覆盖这个中断的sepc寄存器，因此需要保存在trapframe中
   
   if(r_scause() == 8){
     // system call
@@ -62,7 +66,13 @@ usertrap(void)
 
     // an interrupt will change sepc, scause, and sstatus,
     // so enable only now that we're done with those registers.
-    intr_on();
+    intr_on();//在ecall后，程序进入trampoline之前，RISC-V硬件做了几件事：
+                //1、查询sstatus的SIE位是否为0，如果=0则不允许中断响应
+                //2、禁止中断响应，即sstatus的SIE位置0；
+                //3、保存ecall指令地址，let sepc=pc
+                //4、保存当前status中的SPP位，用户模式为0
+                //5、将stvec中的内容拷贝到pc中，即uservec的地址
+                //6、执行新的PC指令
 
     syscall();
   } else if((which_dev = devintr()) != 0){
@@ -77,8 +87,19 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
     yield();
+    if(!p->alarming_flag && p->alarm != 0){
+        p->curAlarm--;
+        if(p->curAlarm <= 0){
+            p->alarming_flag = 1;
+            memmove(&p->save_trapframe, p->trapframe, sizeof(p->save_trapframe));
+            p->trapframe->epc = p->handler;
+            p->curAlarm = p->alarm;
+        }
+    }
+  }
+    
 
   usertrapret();
 }

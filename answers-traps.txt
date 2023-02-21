@@ -1,0 +1,7 @@
+RISC-V assembly:
+1.a2 hold 13; a1 hold 12;
+2.no
+3.0x64a : printf
+4.ra=0x38
+5.0x00646c72  0x72:r  0x6c:l   0x64:d   0x00:null
+6.因为只提供了一个参数，第二个参数寄存器a1是随机的

@@ -145,7 +145,10 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
+    //lab4 traps
+    p->alarm = 0;
+    p->curAlarm = 0;
+    p->alarming_flag = 0;
   return p;
 }
 
