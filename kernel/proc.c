@@ -247,9 +247,11 @@ growproc(int n)
       return -1;
     }
   } else if(n < 0){
-    sz = uvmdealloc(p->pagetable, sz, sz + n);
+        sz = uvmdealloc(p->pagetable, sz, sz + n);
+        //printf("--%p\n", sz);
   }
   p->sz = sz;
+  //vmprint(p->pagetable, 0);
   return 0;
 }
 

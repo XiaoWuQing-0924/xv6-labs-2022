@@ -46,11 +46,11 @@ usertrap(void)
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
-  
+  uint64 sc = r_scause();
   // save user program counter.
   p->trapframe->epc = r_sepc();
   
-  if(r_scause() == 8){
+  if(sc == 8){
     // system call
 
     if(p->killed)
@@ -65,10 +65,33 @@ usertrap(void)
     intr_on();
 
     syscall();
+}else if(sc == 15 || sc == 13){
+    uint64 stval = r_stval();
+    //printf("page fault %p\n", stval);
+    if(stval >= p->sz || (stval <= PGROUNDDOWN(p->trapframe->sp))){
+        //printf("usertrap(): pid=%d Address not allowed to access %p\n", p->pid, r_stval());
+        p->killed = 1;
+    }else{
+        char *mem = kalloc();
+        if(mem == 0){
+            p->killed = 1;
+        }else{
+            memset((void *) mem, 0, PGSIZE);
+            //为什么这里stval必须向下对齐？mappages()中不是有对齐操作么？
+            //因为如果这里不对齐，那么在mappages()会多申请一个页面，
+            //这个页面可能会超过p->sz，因此在程序释放的时候，
+            //uvmfree()中的freewalk()会检测到有页面的V标志没有清除，因此报错panic: freewalk: leaf
+            if(mappages(p->pagetable, PGROUNDDOWN(stval), PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_U) != 0){
+                kfree(mem);
+                p->killed = 1;
+            }
+        }
+    }
+    
   } else if((which_dev = devintr()) != 0){
-    // ok
+      // ok
   } else {
-    printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
+    printf("usertrap(): unexpected scause %p pid=%d\n", sc, p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
   }
