@@ -63,6 +63,13 @@ mycpu(void) {
   return c;
 }
 
+// struct cpu*
+// getmycpu(void){
+//     push_off();
+//     struct cpu *c = mycpu();
+//     pop_off();
+//     return c;
+// }
 // Return the current struct proc *, or zero if none.
 struct proc*
 myproc(void) {
@@ -506,8 +513,11 @@ sched(void)
 
   if(!holding(&p->lock))
     panic("sched p->lock");
-  if(mycpu()->noff != 1)
-    panic("sched locks");
+  if(mycpu()->noff != 1){
+      printf("mycpu()->noff = %d\n",mycpu()->noff );
+      panic("sched locks");
+  }
+    
   if(p->state == RUNNING)
     panic("sched running");
   if(intr_get())
@@ -572,7 +582,7 @@ sleep(void *chan, struct spinlock *lk)
   p->chan = chan;
   p->state = SLEEPING;
 
-  sched();
+  sched();//&p->lock会通过sched()在scheduler(void)中由调度器线程释放。因此在wakeup中，仍能获取该锁
 
   // Tidy up.
   p->chan = 0;
