@@ -379,6 +379,8 @@ bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
   struct buf *bp;
+//   struct buf *bx;
+//   struct buf *bz;
 
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
@@ -400,6 +402,28 @@ bmap(struct inode *ip, uint bn)
     brelse(bp);
     return addr;
   }
+  bn -= NINDIRECT;
+  if(bn < DOUNINDIRECT){
+      if((addr = ip->addrs[NDIRECT + 1]) == 0){
+          ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+      }
+      bp = bread(ip->dev, addr);
+      a = (uint*)bp->data;
+      if((addr = a[bn/256]) == 0){
+          addr = a[bn/256] = balloc(ip->dev);
+          log_write(bp);
+      }
+      brelse(bp);
+      bp = bread(ip->dev, addr);
+      a = (uint*)bp->data;
+      if((addr = a[bn%256]) == 0){
+          log_write(bp);
+          addr = a[bn%256] = balloc(ip->dev);
+      }
+      brelse(bp);
+      return addr;
+  }
+
 
   panic("bmap: out of range");
 }
@@ -411,7 +435,9 @@ itrunc(struct inode *ip)
 {
   int i, j;
   struct buf *bp;
+  struct buf *bz;
   uint *a;
+  uint *b;
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -430,6 +456,23 @@ itrunc(struct inode *ip)
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
+  }
+  if(ip->addrs[NDIRECT + 1]){
+      bp = bread(ip->dev, ip->addrs[NDIRECT + 1]);
+      a = (uint*)bp->data;
+      for(j = 0; j < NINDIRECT; j++){
+          if(a[j]){
+              bz = bread(ip->dev, a[j]);
+              b = (uint*)bz->data;
+              for(int z = 0; z < NINDIRECT; z++){
+                  if(b[z]){
+                      bfree(ip->dev, b[z]);
+                  }
+              }
+              brelse(bz);
+          }
+      }
+      brelse(bp);
   }
 
   ip->size = 0;
@@ -634,7 +677,7 @@ namex(char *path, int nameiparent, char *name)
     ip = iget(ROOTDEV, ROOTINO);
   else
     ip = idup(myproc()->cwd);
-
+//循环查询路径path的每一层dir，并打开最终的inode
   while((path = skipelem(path, name)) != 0){
     ilock(ip);
     if(ip->type != T_DIR){
@@ -660,6 +703,7 @@ namex(char *path, int nameiparent, char *name)
   return ip;
 }
 
+//给定目录的path，查询对应的inode
 struct inode*
 namei(char *path)
 {

@@ -314,6 +314,24 @@ sys_open(void)
       end_op();
       return -1;
     }
+    if(ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)){
+        int count = 0;
+        while(ip->type == T_SYMLINK){
+            if(count >= 10){
+                iunlockput(ip);
+                end_op();
+                return -1;
+            }
+            readi(ip, 0, (uint64)path, 0, MAXPATH);
+            iunlockput(ip);
+            if((ip = namei(path)) == 0){
+                end_op();
+                return -1;
+            }
+            ilock(ip);
+            count++;
+        }
+    }
   }
 
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
@@ -483,4 +501,48 @@ sys_pipe(void)
     return -1;
   }
   return 0;
+}
+
+uint64 sys_symlink(void){
+    char name[DIRSIZ], target[MAXPATH], path[MAXPATH];
+    struct inode *dp, *ip;
+
+    if(argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0)
+        return -1;
+
+    begin_op();
+    //打开父目录
+    if((dp = nameiparent(path, name)) == 0){
+        end_op();
+        return -1;
+    }
+    ilock(dp);
+    //检查是否已存在name文件
+    if((ip = dirlookup(dp, name, 0)) != 0){
+        iunlockput(dp);
+        end_op();
+        return -1;
+    }
+    //否则创建一个新的inode
+    if((ip = ialloc(dp->dev, T_SYMLINK)) == 0)
+        panic("create: ialloc");
+    ilock(ip);
+    ip->major = 0;
+    ip->minor = 0;
+    ip->nlink = 1;
+    writei(ip, 0, (uint64)target, 0, MAXPATH);
+    iupdate(ip);
+
+    if(dirlink(dp, name, ip->inum) < 0)
+        panic("create: dirlink");
+    // if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0){
+    //     iunlockput(dp);
+    //     goto bad;
+    // }
+    iunlockput(ip);
+    iunlockput(dp);
+
+    end_op();
+
+    return 0;
 }

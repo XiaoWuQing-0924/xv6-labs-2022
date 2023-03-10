@@ -33,8 +33,8 @@
 // Contents of the header block, used for both the on-disk header block
 // and to keep track in memory of logged block# before commit.
 struct logheader {
-  int n;
-  int block[LOGSIZE];
+  int n;                //代表有效的log block的数量
+  int block[LOGSIZE];   //log block的实际对应的block编号
 };
 
 struct log {
@@ -194,8 +194,10 @@ static void
 commit()
 {
   if (log.lh.n > 0) {
-    write_log();     // Write modified blocks from cache to log
-    write_head();    // Write header to disk -- the real commit
+    write_log();     // Write modified blocks from cache to log 
+                    //将log中记录的产生变化的block从ram中写入磁盘中的log区域的start+1块中
+    write_head();    // Write header to disk -- the real commit 
+                    //将logheader写入磁盘中log区域的start块中
     install_trans(0); // Now install writes to home locations
     log.lh.n = 0;
     write_head();    // Erase the transaction from the log
