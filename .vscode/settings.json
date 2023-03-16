@@ -19,5 +19,9 @@
         "**/*.o":true,
         "**/*.d":true,
         "**/*.sym":true,
+    },
+    "files.associations": {
+        "fcntl.h": "c",
+        "stddef.h": "c"
     }
 }
