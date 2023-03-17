@@ -22,6 +22,14 @@
     },
     "files.associations": {
         "fcntl.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "deque": "c",
+        "list": "c",
+        "string": "c",
+        "vector": "c",
+        "array": "c",
+        "unordered_map": "c",
+        "string_view": "c",
+        "initializer_list": "c"
     }
 }

@@ -146,6 +146,13 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+  //unmmap the vma
+  for(int i = 0; i < NVMA; i++){
+      if(p->vmas[i].valid == 1){
+          uint npages = (PGROUNDUP(p->vmas[i].vastart + p->vmas[i].sz) - p->vmas[i].vastart)/PGSIZE;
+          uvmunmap(p->pagetable, p->vmas[i].vastart, npages , 1);
+      }
+  }
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
@@ -295,6 +302,14 @@ fork(void)
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
+
+    for(i = 0; i < NVMA; i++) {
+    struct vma *v = &p->vmas[i];
+    if(v->valid) {
+      np->vmas[i] = *v;
+      filedup(v->f);
+    }
+  }
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 

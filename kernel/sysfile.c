@@ -486,7 +486,7 @@ sys_pipe(void)
   return 0;
 }
 uint64 sys_mmap(void){
-    uint64 vaend = -1;
+    uint64 vaend = TRAPFRAME;
     int index = -1;
     uint64 sz;
     struct file *f;
@@ -496,36 +496,132 @@ uint64 sys_mmap(void){
     argaddr(1, &sz);
     argint(2, &prot);
     argint(3, &flags);
-    argaddr(4, f);
+    argfd(4, 0, &f);
     argaddr(5, &offset);
+    if(flags & MAP_SHARED && prot & PROT_WRITE && !f->writable){
+        return -1;
+    }
+    //add the ref of file
+    filedup(f);
     //get the free vma, and the right vaend
     struct proc *p = myproc();
     for(int i = 0; i < NVMA; i++){
-        if(p->vmas[i].valid == 0){
-            index = i;
+        if(p->vmas[i].valid == 0 ){//valid == 0 
+            if(index == -1)
+                index = i;
         }else{
-            uint64 tmp = p->vmas[i].vastart + p->vmas[i].sz;
-            if( tmp < vaend){
-                vaend = tmp;
+            if( p->vmas[i].vastart < vaend){
+                vaend = p->vmas[i].vastart;
             }
         }
     }
     if(index == -1){
         panic("mmap : no vmas!");
     }
-    vaend = -1? TRAPFRAME : vaend;
+    //printf("---%p\n", vaend);
     //put the args to the free vma
     p->vmas[index].valid = 1;
     p->vmas[index].flags = flags;
     p->vmas[index].offset = offset;
     p->vmas[index].prot = prot;
     p->vmas[index].sz = sz;
-    p->vmas[index].vastart = vaend - sz;
+    p->vmas[index].vastart = PGROUNDDOWN(vaend - sz);
+    p->vmas[index].f = (struct file *) f;
+    p->vmas[index].end = p->vmas[index].vastart + sz;
     
-    
+    return p->vmas[index].vastart;
 
-    return 0;
 }
+
+int mmpHandle(uint64 va){
+    struct proc *p = myproc();
+    int index = -1;
+    //seach the right vma
+    for(int i = 0; i < NVMA; i++){
+        if(p->vmas[i].valid == 0){
+            continue;
+        }
+        if(va >= p->vmas[i].vastart && va < p->vmas[i].end){
+            index = i;
+            break;
+        }
+    }
+    if(index == -1){
+        printf("mmpHandle : index == -1\n");
+        return -1;
+    }
+    char * mem = kalloc();
+    if(mem == 0){
+        printf("mmpHandle : mem == 0\n");
+        return -1;
+    }
+    uint off = va - p->vmas[index].vastart + p->vmas[index].offset;
+    uint size = p->vmas[index].end - va < PGSIZE ? p->vmas[index].end - va : PGSIZE;
+    uint n = 0;
+    memset(mem, 0, PGSIZE);
+    if((n = readi(p->vmas[index].f->ip, 0, (uint64)mem, off, size)) != size){
+        //printf("mmpHandle : readi size:%d, in fact:%d\n", size, n);
+    }
+    int perm = (p->vmas[index].prot << 1) | PTE_U;
+    if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, perm) != 0){
+                kfree(mem);
+                printf("mmpHandle : mappages != 0\n");
+                return -1;
+    }
+    return 0;
+
+}
+
 uint64 sys_munmap(void){
+    struct proc *p = myproc();
+    uint64 sz;
+    uint64 va;
+    argaddr(0, &va);
+    argaddr(1, &sz);
+    int index = -1;
+    //seach the right vma
+    for(int i = 0; i < NVMA; i++){
+        if(p->vmas[i].valid == 0){
+            continue;
+        }
+        if(va >= p->vmas[i].vastart && va < p->vmas[i].end){
+            index = i;
+            break;
+        }
+    }
+    if(index == -1){
+        printf("sys_munmap : index == -1\n");
+        return -1;
+    }
+    if(PGROUNDDOWN(va) != p->vmas[index].vastart && PGROUNDUP(va + sz) != PGROUNDUP(p->vmas[index].end)){
+        printf("sys_munmap : Not Allow in hole!\n");
+        return -1;
+    }
+    if(PGROUNDDOWN(va) < p->vmas[index].vastart || PGROUNDUP(va + sz) > PGROUNDUP(p->vmas[index].end)){
+        printf("sys_munmap : too large!\n");
+        return -1;
+    }
+    //if flag = MAP_SHARED, we need write back to the file
+    if(p->vmas[index].flags == MAP_SHARED){
+        uint64 Vastart = PGROUNDDOWN(va);
+        uint64 off = Vastart - p->vmas[index].vastart + p->vmas[index].offset;
+        uint size = PGROUNDUP(va + sz)- Vastart;
+        if(Vastart + size > PGROUNDUP(p->vmas[index].end)){
+            size = PGROUNDUP(p->vmas[index].end) - Vastart;
+        }
+        begin_op();
+        writei(p->vmas[index].f->ip, 1, Vastart, off, size);
+        end_op();
+    }
+    uint64 npages = (PGROUNDUP(va + sz) - PGROUNDDOWN(va)) / PGSIZE;
+    uvmunmap(p->pagetable, PGROUNDDOWN(va), npages , 1);
+    p->vmas[index].sz = p->vmas[index].sz < sz ? 0 : p->vmas[index].sz - sz;
+    if(PGROUNDDOWN(va) == p->vmas[index].vastart){
+        p->vmas[index].vastart = PGROUNDUP(va + sz);
+    }
+    if(p->vmas[index].sz == 0){
+        fileclose(p->vmas[index].f);
+        p->vmas[index].valid = 0;
+    }
     return 0;
 }

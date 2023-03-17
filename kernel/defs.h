@@ -174,7 +174,7 @@ int             copyinstr(pagetable_t, char *, uint64, uint64);
 
 uint64          sys_mmap(void);
 uint64          sys_munmap(void);
-
+int             mmpHandle(uint64);
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);
